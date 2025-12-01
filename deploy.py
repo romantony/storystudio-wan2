@@ -56,29 +56,29 @@ def check_modal_authenticated():
 
 def main():
     print("=" * 70)
-    print("🚀 Wan2.2 S2V Modal Deployment Script")
+    print("Wan2.2 S2V Modal Deployment Script")
     print("=" * 70)
     
     # Step 1: Check Modal installation
     print("\n[1/5] Checking Modal installation...")
     if not check_modal_installed():
-        print("❌ Modal is not installed")
+        print("[X] Modal is not installed")
         print("\nInstalling Modal...")
         if not run_command([sys.executable, "-m", "pip", "install", "modal"], "Install Modal"):
-            print("\n⚠️  Failed to install Modal. Please run: pip install modal")
+            print("\n[!] Failed to install Modal. Please run: pip install modal")
             return False
     else:
-        print("✅ Modal is installed")
+        print("[OK] Modal is installed")
     
     # Step 2: Check Modal authentication
     print("\n[2/5] Checking Modal authentication...")
     if not check_modal_authenticated():
-        print("❌ Modal is not authenticated")
+        print("[X] Modal is not authenticated")
         print("\nPlease run: modal setup")
         print("Then run this script again.")
         return False
     else:
-        print("✅ Modal is authenticated")
+        print("[OK] Modal is authenticated")
     
     # Step 3: Generate API key (optional)
     print("\n[3/5] API Key Setup (optional)")
@@ -87,15 +87,15 @@ def main():
     if response == 'y':
         if Path("generate_api_keys.py").exists():
             run_command([sys.executable, "generate_api_keys.py"], "Generate API Key")
-            print("\n⚠️  Remember to configure Modal Secret:")
-            print("   1. Go to https://modal.com/ → Secrets")
+            print("\n[!] Remember to configure Modal Secret:")
+            print("   1. Go to https://modal.com/ -> Secrets")
             print("   2. Create secret: 'wan2-api-keys'")
             print("   3. Add environment variable: WAN2_API_KEYS=your-key")
             input("\nPress Enter when you've configured the secret (or skip by pressing Enter)...")
         else:
-            print("⚠️  generate_api_keys.py not found. Skipping...")
+            print("[!] generate_api_keys.py not found. Skipping...")
     else:
-        print("⚠️  Skipping API key generation. API will run without authentication.")
+        print("[!] Skipping API key generation. API will run without authentication.")
     
     # Step 4: Deploy to Modal
     print("\n[4/5] Deploying to Modal...")
@@ -103,14 +103,14 @@ def main():
     print("It may take 5-10 minutes on first deployment.")
     
     if not run_command(["modal", "deploy", "wan2_modal.py"], "Deploy to Modal"):
-        print("\n❌ Deployment failed. Check the errors above.")
+        print("\n[X] Deployment failed. Check the errors above.")
         return False
     
     # Step 5: Test deployment
     print("\n[5/5] Testing deployment...")
-    print("\n✅ Deployment successful!")
+    print("\n[OK] Deployment successful!")
     print("\n" + "=" * 70)
-    print("🎉 Your Wan2.2 S2V API is now live!")
+    print("Your Wan2.2 S2V API is now live!")
     print("=" * 70)
     
     print("\n📋 Next Steps:")
@@ -135,8 +135,8 @@ if __name__ == "__main__":
         success = main()
         sys.exit(0 if success else 1)
     except KeyboardInterrupt:
-        print("\n\n⚠️  Deployment cancelled by user")
+        print("\n\n[!] Deployment cancelled by user")
         sys.exit(1)
     except Exception as e:
-        print(f"\n❌ Unexpected error: {e}")
+        print(f"\n[X] Unexpected error: {e}")
         sys.exit(1)
