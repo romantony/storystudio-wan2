@@ -6,6 +6,8 @@
 **Type:** Audio-driven cinematic video generation (14B parameters)
 **Task:** Generate videos from audio + reference image + optional text prompt
 **Output:** 480P or 720P video at 24fps
+**Official Repo:** https://github.com/Wan-Video/Wan2.2
+**HuggingFace:** https://huggingface.co/Wan-AI/Wan2.2-S2V-14B
 
 ## Repository Decision
 
@@ -44,11 +46,17 @@ storystudio-wan2/             (new - for video generation)
 
 ### Model Details
 - **Model Size:** 14B parameters (MoE: 27B total, 14B active)
-- **Model Files:** ~50-60GB total
-  - High-noise expert: ~14B params
-  - Low-noise expert: ~14B params
-  - VAE: wan_2.1_vae.safetensors
-  - Text Encoder: umt5_xxl (5B params)
+- **Model Files:** 49.1GB total from HuggingFace
+  - Diffusion Model (4 shards):
+    - `diffusion_pytorch_model-00001-of-00004.safetensors` (9.97 GB)
+    - `diffusion_pytorch_model-00002-of-00004.safetensors` (9.89 GB)
+    - `diffusion_pytorch_model-00003-of-00004.safetensors` (9.96 GB)
+    - `diffusion_pytorch_model-00004-of-00004.safetensors` (2.77 GB)
+    - `diffusion_pytorch_model.safetensors.index.json` (113 KB)
+  - VAE: `Wan2.1_VAE.pth` (508 MB)
+  - Text Encoder: `models_t5_umt5-xxl-enc-bf16.pth` (11.4 GB)
+  - Audio Encoder: `wav2vec2-large-xlsr-53-english/` (folder)
+  - Config files: `config.json`, `configuration.json`
   
 ### Requirements
 - **Minimum GPU:** 1x A100-80GB (with model offloading)
@@ -92,6 +100,7 @@ accelerate >= 0.30.0
 librosa >= 0.10.0
 soundfile >= 0.12.0
 torchaudio >= 2.0.0
+transformers >= 4.40.0  # For wav2vec2 audio encoder
 
 # Video processing
 opencv-python >= 4.8.0
@@ -202,32 +211,81 @@ modal setup
 ```
 
 ### Phase 2: Model Download Strategy
+
+**Official Download Command:**
+```bash
+# Using huggingface-cli (recommended)
+pip install "huggingface_hub[cli]"
+huggingface-cli download Wan-AI/Wan2.2-S2V-14B --local-dir ./Wan2.2-S2V-14B
+
+# OR using modelscope-cli
+pip install modelscope
+modelscope download Wan-AI/Wan2.2-S2V-14B --local_dir ./Wan2.2-S2V-14B
+```
+
+**For Modal:**
 ```python
 # Use Modal volumes for caching
 volume = modal.Volume.from_name("wan2-models", create_if_missing=True)
 
-@app.function(timeout=3600)
+@app.function(timeout=3600, image=image)
 def download_models():
     """Download models to Modal volume"""
-    # Download from HuggingFace
-    # Store in /models volume
-    pass
+    import subprocess
+    subprocess.run([
+        "huggingface-cli", "download", 
+        "Wan-AI/Wan2.2-S2V-14B",
+        "--local-dir", "/models/Wan2.2-S2V-14B"
+    ])
+    print("Model downloaded successfully!")
 ```
 
 ### Phase 3: Core Implementation
+
+**Official Single-GPU Command:**
+```bash
+python generate.py \
+  --task s2v-14B \
+  --size 1024*704 \
+  --ckpt_dir ./Wan2.2-S2V-14B/ \
+  --offload_model True \
+  --convert_model_dtype \
+  --prompt "Summer beach vacation style, a white cat wearing sunglasses sits on a surfboard." \
+  --image "examples/i2v_input.JPG" \
+  --audio "examples/talk.wav"
+# Requires 80GB VRAM minimum
+```
+
+**Official Multi-GPU Command (8 GPUs):**
+```bash
+torchrun --nproc_per_node=8 generate.py \
+  --task s2v-14B \
+  --size 1024*704 \
+  --ckpt_dir ./Wan2.2-S2V-14B/ \
+  --dit_fsdp \
+  --t5_fsdp \
+  --ulysses_size 8 \
+  --prompt "Summer beach vacation style, a white cat wearing sunglasses sits on a surfboard." \
+  --image "examples/i2v_input.JPG" \
+  --audio "examples/talk.wav"
+```
+
+**Modal Wrapper:**
 ```python
 class Wan2S2VModel:
     @modal.enter()
     def load_model(self):
-        # Load models with proper device placement
+        # Clone official repo
+        # Load models from /models volume
         # Configure FSDP if multi-GPU
-        # Load audio processor
+        # Load audio processor (wav2vec2)
         pass
     
     @modal.method()
     def generate(self, image, audio, prompt, **kwargs):
-        # Process audio
-        # Generate video
+        # Use official generate.py logic
+        # Process audio with wav2vec2
+        # Generate video with MoE architecture
         # Return video bytes
         pass
 ```

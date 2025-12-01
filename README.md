@@ -18,35 +18,68 @@ Audio-driven cinematic video generation model deployed on Modal platform.
 - 🌟 14B parameter MoE architecture
 - 📺 720P @ 24fps output
 
-## Quick Start
+## Quick Start (3 Steps)
 
-### Prerequisites
+### Option A: Automated Deployment (Easiest)
+```bash
+python deploy.py
+```
+This script will guide you through the entire deployment process!
+
+### Option B: Manual Deployment
+
+#### 1. Prerequisites & Deploy
 ```bash
 pip install modal
 modal setup
-```
-
-### Deploy to Modal
-```bash
 modal deploy wan2_modal.py
 ```
 
-### Generate Video
+#### 2. Test the Deployment
+```bash
+# Get your app URL from deployment output
+# Test health endpoint
+curl https://your-app-url.modal.run/health
+
+# Test video generation
+python test_client.py \
+  --url https://your-app-url.modal.run \
+  --image reference.jpg \
+  --audio audio.wav \
+  --prompt "A person talking"
+```
+
+See **[DEPLOYMENT.md](DEPLOYMENT.md)** for detailed instructions.
+
+### 3. Use the API
+
+**HTTP Request:**
+```bash
+curl -X POST https://your-app.modal.run/generate-video \
+  -H "X-API-Key: your-api-key-here" \
+  -F "image=@reference.jpg" \
+  -F "audio=@audio.wav" \
+  -F "prompt=A person talking" \
+  -F "resolution=720p"
+```
+
+**Python Client:**
 ```python
-import modal
+import requests
 
-Wan2Model = modal.Cls.lookup("wan2-s2v", "Wan2S2VModel")
+url = "https://your-app.modal.run/generate-video"
+headers = {"X-API-Key": "your-api-key-here"}
+files = {
+    "image": open("reference.jpg", "rb"),
+    "audio": open("audio.wav", "rb"),
+}
+data = {
+    "prompt": "A person talking",
+    "resolution": "720p"
+}
 
-with Wan2Model() as model:
-    video_bytes = model.generate.remote(
-        image_path="reference.jpg",
-        audio_path="audio.wav",
-        prompt="A person talking",
-        resolution="720p"
-    )
-    
-    with open("output.mp4", "wb") as f:
-        f.write(video_bytes)
+response = requests.post(url, headers=headers, files=files, data=data)
+video_data = response.json()
 ```
 
 ## Model Specifications
@@ -86,10 +119,9 @@ with Wan2Model() as model:
 
 ## Documentation
 
-- [Implementation Plan](IMPLEMENTATION_PLAN.md) - Technical details
-- [API Documentation](API.md) - API reference
-- [Deployment Guide](DEPLOYMENT.md) - Setup instructions
-- [Cost Analysis](COSTS.md) - Pricing details
+- [Implementation Plan](IMPLEMENTATION_PLAN.md) - Technical details and architecture
+- [API Key Setup](API_KEY_SETUP.md) - **Security and authentication guide**
+- [Model Details Verified](MODEL_DETAILS_VERIFIED.md) - Complete model specifications
 
 ## Repository Structure
 
@@ -110,6 +142,25 @@ storystudio-wan2/
     ├── pose_driven.py
     └── batch_process.py
 ```
+
+## Security
+
+### API Key Authentication
+This deployment uses API key authentication via the `X-API-Key` header.
+
+**Setup:**
+1. Generate key: `python generate_api_keys.py`
+2. Configure Modal Secret: `wan2-api-keys`
+3. Set environment variable: `WAN2_API_KEYS`
+
+**Best Practices:**
+- ✅ Use strong, randomly generated keys
+- ✅ Store keys in environment variables
+- ✅ Rotate keys periodically
+- ❌ Never commit keys to version control
+- ❌ Never expose keys in client-side code
+
+See [API_KEY_SETUP.md](API_KEY_SETUP.md) for complete guide.
 
 ## Resources
 

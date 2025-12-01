@@ -1,3 +1,11 @@
+# API Keys and Secrets - NEVER COMMIT THESE
+api_keys_*.json
+*.key
+.env
+.env.local
+.env.production
+secrets.json
+
 # Python
 __pycache__/
 *.py[cod]
